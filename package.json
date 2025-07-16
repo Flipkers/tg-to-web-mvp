@@ -1,0 +1,17 @@
+{
+  "name": "tg-to-web-mvp",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro start",
+    "build": "astro build"
+  },
+  "dependencies": {
+    "astro": "^4.0.0",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.14"
+  }
+}
