@@ -3,7 +3,7 @@ import fs from 'fs/promises';
 import fetch from 'node-fetch';
 
 // === НАСТРОЙКИ ===
-const TELEGRAM_BOT_TOKEN = import.meta.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 const POSTS_PATH = 'posts.json';
 
