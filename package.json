@@ -8,7 +8,8 @@
     "build": "astro build"
   },
   "dependencies": {
-    "astro": "^4.0.0",
+    "@astrojs/vercel": "^8.2.2",
+    "astro": "^5.11.2",
     "node-fetch": "^3.3.2"
   },
   "devDependencies": {
