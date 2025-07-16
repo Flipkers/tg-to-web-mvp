@@ -1,48 +1,40 @@
-# TgToWeb MVP
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
 
-## Как запустить
+## Getting Started
 
-1. Установи зависимости:
-   ```bash
-   npm install
-   ```
-2. В файле `src/pages/api/telegram.ts` вставь свой Telegram Bot Token:
-   ```ts
-   const TELEGRAM_BOT_TOKEN = 'YOUR_BOT_TOKEN';
-   ```
-3. Запусти Astro:
-   ```bash
-   npm run dev
-   ```
-4. Прокинь webhook через ngrok или другой сервис:
-   ```bash
-   ngrok http 4321
-   ```
-5. Установи webhook для Telegram:
-   ```bash
-   curl -F "url=https://<ngrok-url>/api/telegram" https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook
-   ```
+First, run the development server:
 
-## Как пользоваться
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-- Просто пересылай посты из каналов своему боту.
-- Посты сохраняются в `posts.json`.
-- После сохранения бот отвечает: `✅ Пост сохранён в блоге`. 
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## 🚀 Деплой на Vercel
+You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
 
-1. Зарегистрируйся на [vercel.com](https://vercel.com/) и подключи свой GitHub-репозиторий с этим проектом.
-2. Деплой произойдёт автоматически (Astro поддерживается из коробки).
-3. После деплоя получишь публичный адрес вида:
-   ```
-   https://your-vercel-project.vercel.app
-   ```
-4. Установи Telegram webhook:
-   ```bash
-   curl -F "url=https://your-vercel-project.vercel.app/api/telegram" https://api.telegram.org/bot<ТВОЙ_ТОКЕН>/setWebhook
-   ```
-5. Теперь Telegram будет слать запросы на твой Vercel endpoint!
+[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
 
-**Важно:**
-- Для секретов (токен бота) используй переменные окружения Vercel: Settings → Environment Variables → TELEGRAM_BOT_TOKEN
-- Локальный posts.json на Vercel не будет сохраняться между деплоями! Для продакшена лучше использовать БД или облачное хранилище. 
+The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+
+This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
