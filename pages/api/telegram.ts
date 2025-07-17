@@ -6,8 +6,23 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+async function getPhotoUrl(fileId: string, botToken: string): Promise<string | null> {
+  const TELEGRAM_API = `https://api.telegram.org/bot${botToken}`;
+  const resp = await fetch(`${TELEGRAM_API}/getFile?file_id=${fileId}`);
+  const data = await resp.json();
+  if (!data.ok) return null;
+  const filePath = data.result.file_path;
+  return `https://api.telegram.org/file/bot${botToken}/${filePath}`;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end();
+
+  const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+  if (!TELEGRAM_BOT_TOKEN) {
+    console.error('TELEGRAM_BOT_TOKEN is not set');
+    return res.status(500).json({ error: 'Bot token not set' });
+  }
 
   try {
     const update = req.body;
@@ -21,8 +36,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const channel_id = msg.forward_from_chat.id;
     let photo_url = null;
     if (msg.photo && Array.isArray(msg.photo) && msg.photo.length > 0) {
-      // Можно реализовать получение ссылки на фото через Telegram API, если нужно
-      photo_url = null;
+      const fileId = msg.photo[msg.photo.length - 1].file_id;
+      photo_url = await getPhotoUrl(fileId, TELEGRAM_BOT_TOKEN);
     }
 
     // Сохраняем пост в Supabase
@@ -33,9 +48,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error('Ошибка при сохранении в Supabase:', error);
       return res.status(500).json({ error: error.message });
     }
-
-    // Ответ пользователю (опционально)
-    // ...код для ответа в Telegram...
 
     return res.status(200).json({ ok: true });
   } catch (e) {
