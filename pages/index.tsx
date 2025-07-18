@@ -3,11 +3,7 @@ import type { GetServerSideProps } from 'next';
 import Link from 'next/link';
 import PostCard from '../components/PostCard';
 import { useState, useEffect } from 'react';
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_ANON_KEY!
-);
+import { supabase } from '../lib/supabaseClient';
 
 export const getServerSideProps: GetServerSideProps = async () => {
   const { data: posts, error } = await supabase
@@ -35,8 +31,10 @@ export default function Blog({ posts, error, blogTitle, blogAvatar }: any) {
   const rest = posts.slice(1);
   const [categories, setCategories] = useState([]);
   const [selectedCat, setSelectedCat] = useState('all');
+  const [user, setUser] = useState<any>(null);
   useEffect(() => {
     fetch('/api/categories').then(r => r.json()).then(setCategories);
+    supabase.auth.getUser().then(({ data }) => setUser(data?.user));
   }, []);
   const filteredPosts = selectedCat === 'all' ? rest : rest.filter((p: any) => p.category === selectedCat);
   const [editing, setEditing] = useState(false);
@@ -112,6 +110,14 @@ export default function Blog({ posts, error, blogTitle, blogAvatar }: any) {
           </button>
         ))}
       </div>
+      {/* Пустой блог для залогиненного пользователя */}
+      {user && posts.length === 0 && (
+        <div className="max-w-2xl mx-auto my-16 p-8 bg-white rounded-xl shadow text-center text-lg text-gray-700">
+          <div className="mb-2 font-bold text-2xl">Ваш блог пока пуст</div>
+          <div className="mb-4">Чтобы наполнить его, отправьте 5-10 постов нашему Telegram-боту:<br /><span className="font-mono text-blue-600">@yourbot</span></div>
+          <div className="text-gray-500 text-sm">Посты появятся здесь автоматически после отправки</div>
+        </div>
+      )}
       {/* Grid of other posts */}
       <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-12">
         {filteredPosts.map((post: any) => (
