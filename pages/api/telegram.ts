@@ -30,13 +30,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const update = req.body;
     const msg = update.message;
-    if (!msg || !msg.chat || msg.chat.type !== 'channel') {
-      return res.status(200).json({ result: 'Not a channel post' });
+    if (!msg) {
+      return res.status(200).json({ result: 'No message' });
+    }
+
+    // Используем channel_id из forward_from_chat, если это пересланное сообщение из канала
+    const channel_id = msg.forward_from_chat?.id || msg.chat?.id;
+    if (!channel_id) {
+      return res.status(200).json({ result: 'No channel_id' });
     }
 
     const text = msg.text || msg.caption || '';
-    const date = msg.date;
-    const channel_id = msg.chat.id;
+    const date = msg.forward_date || msg.date;
     let photo_url = null;
     if (msg.photo && Array.isArray(msg.photo) && msg.photo.length > 0) {
       const fileId = msg.photo[msg.photo.length - 1].file_id;
