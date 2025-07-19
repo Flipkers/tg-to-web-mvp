@@ -17,7 +17,13 @@ export default function Login() {
       if (error) setError(error.message);
       else {
         setMessage('Вход выполнен!');
-        window.location.reload(); // reload для срабатывания useEffect в _app.tsx
+        const { data } = await supabase.auth.getUser();
+        const userId = data?.user?.id;
+        if (userId) {
+          window.location.href = `/u/${userId}`;
+        } else {
+          window.location.href = '/';
+        }
       }
     } else {
       const { error } = await supabase.auth.signUp({ email, password });
