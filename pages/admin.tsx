@@ -1,12 +1,26 @@
 import { useState, useEffect, useRef } from 'react';
 import PostCard from '../components/PostCard';
+import { supabase } from '../lib/supabaseClient';
+import { useRouter } from 'next/router';
+import Link from 'next/link';
 
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
 
 export default function Admin() {
-  const [auth, setAuth] = useState(false);
-  const [input, setInput] = useState('');
-  const [error, setError] = useState('');
+  const [authUser, setAuthUser] = useState<any>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data?.user) {
+        router.replace('/login');
+      } else {
+        setAuthUser(data.user);
+      }
+      setLoadingAuth(false);
+    });
+  }, []);
 
   // Blog settings state
   const [loading, setLoading] = useState(true);
@@ -18,14 +32,7 @@ export default function Admin() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const ok = localStorage.getItem('admin_auth') === '1';
-      setAuth(ok);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (auth) {
+    if (authUser) {
       setLoading(true);
       fetch('/api/blog-settings')
         .then(res => res.json())
@@ -36,23 +43,26 @@ export default function Admin() {
         })
         .finally(() => setLoading(false));
     }
-  }, [auth]);
+  }, [authUser]);
 
-  function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    if (input === ADMIN_PASSWORD) {
-      localStorage.setItem('admin_auth', '1');
-      setAuth(true);
-      setError('');
-    } else {
-      setError('Неверный пароль');
+  // Состояния для привязки канала
+  const [channelInput, setChannelInput] = useState('');
+  const [claimStatus, setClaimStatus] = useState<'idle'|'pending'|'success'|'error'>('idle');
+  const [claimError, setClaimError] = useState('');
+  const [linkedChannel, setLinkedChannel] = useState<any>(null);
+
+  // Получаем привязанный канал из базы
+  useEffect(() => {
+    if (authUser) {
+      fetch(`/api/get-linked-channel?user_id=${authUser.id}`)
+        .then(res => res.json())
+        .then(data => setLinkedChannel(data.channel || null));
     }
-  }
+  }, [authUser, claimStatus]);
 
   function handleLogout() {
-    localStorage.removeItem('admin_auth');
-    setAuth(false);
-    setInput('');
+    supabase.auth.signOut();
+    router.replace('/login');
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -80,25 +90,27 @@ export default function Admin() {
     setSaving(false);
   }
 
-  if (!auth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <form onSubmit={handleLogin} className="bg-white p-8 rounded-xl shadow max-w-xs w-full flex flex-col gap-4">
-          <h2 className="text-xl font-bold mb-2">Вход в админку</h2>
-          <input
-            type="password"
-            className="border rounded px-3 py-2"
-            placeholder="Пароль"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            autoFocus
-          />
-          {error && <div className="text-red-600 text-sm">{error}</div>}
-          <button type="submit" className="bg-blue-600 text-white rounded px-4 py-2 font-semibold hover:bg-blue-700 transition">Войти</button>
-        </form>
-      </div>
-    );
+  async function handleClaimChannel(e: React.FormEvent) {
+    e.preventDefault();
+    setClaimStatus('pending');
+    setClaimError('');
+    const res = await fetch('/api/claim-channel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: authUser.id, channel: channelInput }),
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      setClaimStatus('success');
+      setChannelInput('');
+    } else {
+      setClaimStatus('error');
+      setClaimError(data.error || 'Ошибка привязки');
+    }
   }
+
+  if (loadingAuth) return <div className="min-h-screen flex items-center justify-center">Загрузка...</div>;
+  if (!authUser) return null;
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-gray-400">Загрузка…</div>;
@@ -106,11 +118,44 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 md:px-8">
-      <div className="bg-white rounded-xl shadow p-8 border border-gray-200 flex flex-col gap-10 w-full">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-gray-900">Настройки блога</h2>
-          <button onClick={handleLogout} className="text-gray-500 hover:text-gray-900 text-sm">Выйти</button>
+      <div className="flex justify-between items-center mb-8 max-w-6xl mx-auto">
+        <h2 className="text-2xl font-bold text-gray-900">Настройки блога</h2>
+        <div className="flex gap-4 items-center">
+          <Link href={`/u/${authUser.id}`} className="px-6 py-2 bg-gray-200 text-gray-900 rounded-lg font-semibold shadow hover:bg-gray-300 transition">На блог</Link>
+          <button onClick={handleLogout} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition">Выйти</button>
         </div>
+      </div>
+      {/* Инструкция по привязке Telegram-канала */}
+      <div className="max-w-2xl mx-auto my-8 p-6 bg-blue-50 rounded text-blue-900 text-center">
+        <div className="font-bold mb-2">Привязка Telegram-канала</div>
+        {linkedChannel ? (
+          <div className="mb-2">
+            <div>Канал привязан:</div>
+            <div className="font-mono bg-white rounded p-2 my-2 inline-block text-blue-700">
+              {linkedChannel.channel_title || linkedChannel.channel_username || linkedChannel.channel_id}
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleClaimChannel} className="flex flex-col gap-2 items-center">
+            <input
+              type="text"
+              className="border rounded px-3 py-2 text-center"
+              placeholder="@username или -100..."
+              value={channelInput}
+              onChange={e => setChannelInput(e.target.value)}
+              required
+            />
+            <button type="submit" className="bg-blue-600 text-white rounded px-4 py-2 font-semibold hover:bg-blue-700 transition" disabled={claimStatus==='pending'}>
+              {claimStatus==='pending' ? 'Проверяю…' : 'Привязать канал'}
+            </button>
+            {claimStatus==='success' && <div className="text-green-600 text-sm mt-2">Канал успешно привязан!</div>}
+            {claimStatus==='error' && <div className="text-red-600 text-sm mt-2">{claimError}</div>}
+          </form>
+        )}
+        <div className="text-xs text-gray-500 mb-2">Ваш user_id: <span className="font-mono select-all">{authUser.id}</span></div>
+        <div>Бот: <a href="https://t.me/yourbot" target="_blank" rel="noopener noreferrer" className="underline font-mono">@yourbot</a></div>
+      </div>
+      <div className="bg-white rounded-xl shadow p-8 border border-gray-200 flex flex-col gap-10 w-full">
         <form className="flex flex-col gap-4 max-w-2xl" onSubmit={handleSave}>
           <label className="flex flex-col gap-2">
             <span className="font-semibold text-gray-900">Аватарка блога</span>
@@ -163,18 +208,18 @@ export default function Admin() {
         </form>
         <div className="mt-8">
           <h3 className="text-xl font-bold text-gray-900 mb-4">Рубрики (категории)</h3>
-          <CategoryManager />
+          <CategoryManager userId={authUser.id} />
         </div>
         <div className="mt-8">
           <h3 className="text-xl font-bold text-gray-900 mb-4">Посты</h3>
-          <PostCategoryManager />
+          <PostCategoryManager userId={authUser.id} />
         </div>
       </div>
     </div>
   );
 }
 
-function CategoryManager() {
+function CategoryManager({ userId }: { userId: string }) {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
@@ -184,10 +229,10 @@ function CategoryManager() {
   const [editSlug, setEditSlug] = useState('');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { fetchCategories(); }, []);
+  useEffect(() => { fetchCategories(); }, [userId]);
   async function fetchCategories() {
     setLoading(true);
-    const res = await fetch('/api/categories');
+    const res = await fetch(`/api/categories?user_id=${userId}`);
     const data = await res.json();
     setCategories(data);
     setLoading(false);
@@ -198,7 +243,7 @@ function CategoryManager() {
     await fetch('/api/categories', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, slug }),
+      body: JSON.stringify({ name, slug, user_id: userId }),
     });
     setName(''); setSlug(''); setSaving(false); fetchCategories();
   }
@@ -211,7 +256,7 @@ function CategoryManager() {
     await fetch('/api/categories', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: editId, name: editName, slug: editSlug }),
+      body: JSON.stringify({ id: editId, name: editName, slug: editSlug, user_id: userId }),
     });
     setEditId(null); setEditName(''); setEditSlug(''); setSaving(false); fetchCategories();
   }
@@ -220,7 +265,7 @@ function CategoryManager() {
     await fetch('/api/categories', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id, user_id: userId }),
     });
     fetchCategories();
   }
@@ -258,18 +303,18 @@ function CategoryManager() {
   );
 }
 
-function PostCategoryManager() {
+function PostCategoryManager({ userId }: { userId: string }) {
   const [posts, setPosts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string|null>(null);
   useEffect(() => {
     fetchPosts();
-    fetch('/api/categories').then(r => r.json()).then(setCategories);
-  }, []);
+    fetch(`/api/categories?user_id=${userId}`).then(r => r.json()).then(setCategories);
+  }, [userId]);
   async function fetchPosts() {
     setLoading(true);
-    const res = await fetch('/api/admin-posts');
+    const res = await fetch(`/api/admin-posts?user_id=${userId}`);
     const data = await res.json();
     setPosts(data);
     setLoading(false);
@@ -279,7 +324,7 @@ function PostCategoryManager() {
     await fetch('/api/admin-posts', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: postId, category }),
+      body: JSON.stringify({ id: postId, category, user_id: userId }),
     });
     setSavingId(null);
     fetchPosts();

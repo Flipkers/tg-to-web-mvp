@@ -107,6 +107,7 @@ export default function UserBlog({ posts, error, blogTitle: initialTitle, blogAv
         {isOwner ? (
           <div className="flex items-center gap-4">
             {currentEmail && <span className="text-gray-600 text-sm">{currentEmail}</span>}
+            <Link href="/admin" className="px-6 py-2 bg-gray-200 text-gray-900 rounded-lg font-semibold shadow hover:bg-gray-300 transition">Настройки</Link>
             <button onClick={handleLogout} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition">Выйти</button>
           </div>
         ) : (
